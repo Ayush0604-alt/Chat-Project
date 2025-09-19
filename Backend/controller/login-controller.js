@@ -5,15 +5,16 @@ const jwt = require('jsonwebtoken');
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const userField = await User.findOne({ username });
-    if (!userField) {
+    const user = await User.findOne({ username });
+    
+    if (!user) {
       return res.status(400).json({
         success: false,
         message: 'User not found',
       });
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, userField.Password);
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
       return res.status(401).json({
         success: false,
@@ -22,25 +23,26 @@ const login = async (req, res) => {
     }
 
     const accessToken = jwt.sign(
-      { userId: userField._id,
-      username: userField.username },
+      { 
+        userId: user._id,
+        username: user.username 
+      },
       process.env.JWT_SECRET, 
       { expiresIn: '1h' } 
     );
 
-    // 4. Send response
     return res.status(200).json({
       success: true,
       message: 'Login successful',
       token: accessToken,
       user: {
-        id: userField._id,
-        username: userField.username,
-        email: userField.email,
+        id: user._id,
+        username: user.username,
+        email: user.email,
       },
     });
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({
       success: false,
       message: 'Server error. Please try again later.',
