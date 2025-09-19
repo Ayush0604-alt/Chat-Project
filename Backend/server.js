@@ -14,6 +14,11 @@ connectToDB();
 // Middleware
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+app.use(cors({
+  origin: "https://frabjous-pony-eb7a38.netlify.app", // your frontend domain
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 
 // Import models (pre-load to avoid dynamic imports)
 const Message = require('./Model/message');
