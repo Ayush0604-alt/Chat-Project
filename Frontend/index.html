@@ -3,995 +3,1003 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatApp - Connect with Friends</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>ChatApp - Real-Time Messaging</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
         }
-
-        :root {
-            --primary: #4e54c8;
-            --primary-dark: #3f43a9;
-            --secondary: #8f94fb;
-            --light: #f8f9fa;
-            --dark: #343a40;
-            --gray: #6c757d;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --info: #17a2b8;
+        
+        .message-enter {
+            animation: messageEnter 0.3s ease-out;
         }
-
-        body {
-            background: linear-gradient(to right, var(--primary), var(--secondary));
-            color: var(--dark);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+        
+        .notification-show {
+            animation: notificationSlide 0.3s ease-out;
         }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 15px;
+        
+        .page-transition {
+            animation: fadeIn 0.3s ease-out;
         }
-
-        /* Header Styles */
-        header {
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        
+        @keyframes messageEnter {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
+        
+        @keyframes notificationSlide {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
         }
-
-        .logo i {
-            font-size: 1.8rem;
-        }
-
-        nav ul {
-            display: flex;
-            list-style: none;
-            gap: 20px;
-        }
-
-        nav a {
-            text-decoration: none;
-            color: var(--dark);
-            font-weight: 500;
-            padding: 5px 10px;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-
-        nav a:hover, nav a.active {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .user-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 5px;
-            border: none;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            border: 1px solid var(--primary);
-            color: var(--primary);
-        }
-
-        .btn-outline:hover {
-            background-color: var(--primary);
-            color: white;
-        }
-
-        /* Main Content */
-        main {
-            flex: 1;
-            padding: 30px 0;
-        }
-
-        .page {
-            display: none;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            padding: 30px;
-            margin-bottom: 30px;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        .page-title {
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: var(--primary);
-            border-bottom: 2px solid var(--secondary);
-            padding-bottom: 10px;
-        }
-
-        /* Auth Forms */
-        .auth-container {
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            outline: none;
-        }
-
-        /* Chat Layout */
-        .chat-container {
-            display: flex;
-            height: 70vh;
-            gap: 20px;
-        }
-
-        .conversations-sidebar {
-            flex: 0 0 300px;
-            border-right: 1px solid #eee;
-            overflow-y: auto;
-        }
-
-        .conversations-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .conversation-list {
-            list-style: none;
-        }
-
-        .conversation-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .conversation-item:hover {
-            background-color: #f9f9f9;
-        }
-
-        .conversation-item.active {
-            background-color: #eef2ff;
-        }
-
-        .avatar {
-            width: 40px;
-            height: 40px;
+        
+        .online-indicator {
+            width: 12px;
+            height: 12px;
+            background-color: #10B981;
             border-radius: 50%;
-            background-color: var(--secondary);
-            display: flex;
+            border: 2px solid white;
+        }
+        
+        .offline-indicator {
+            width: 12px;
+            height: 12px;
+            background-color: #9CA3AF;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-        }
-
-        .conversation-info {
-            flex: 1;
-        }
-
-        .conversation-name {
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
-
-        .conversation-preview {
-            font-size: 0.9rem;
-            color: var(--gray);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .message {
-            max-width: 70%;
-            padding: 12px 15px;
+            background-color: #F3F4F6;
+            padding: 4px 12px;
             border-radius: 18px;
-            position: relative;
+            font-size: 0.875rem;
+            color: #6B7280;
         }
-
-        .message.sent {
-            align-self: flex-end;
-            background-color: var(--primary);
-            color: white;
-            border-bottom-right-radius: 5px;
-        }
-
-        .message.received {
-            align-self: flex-start;
-            background-color: #f0f0f0;
-            color: var(--dark);
-            border-bottom-left-radius: 5px;
-        }
-
-        .message-sender {
-            font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        .message-time {
-            font-size: 0.7rem;
-            margin-top: 5px;
-            opacity: 0.8;
-            text-align: right;
-        }
-
-        .chat-input {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            display: flex;
-            gap: 10px;
-        }
-
-        .message-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            font-size: 1rem;
-        }
-
-        .send-btn {
-            background-color: var(--primary);
-            color: white;
-            border: none;
+        
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background-color: #9CA3AF;
             border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+            margin: 0 1px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
         }
-
-        .send-btn:hover {
-            background-color: var(--primary-dark);
+        
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-5px);
+            }
         }
-
-        /* User List */
-        .user-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
+        
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
         }
-
-        .user-card {
-            background-color: white;
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
             border-radius: 10px;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            text-align: center;
-            transition: transform 0.3s ease;
         }
-
-        .user-card:hover {
-            transform: translateY(-5px);
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c5c5c5;
+            border-radius: 10px;
         }
-
-        .user-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background-color: var(--secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        .conversation-active {
+            background-color: #EDE9FE;
+            border-right: 3px solid #8B5CF6;
+        }
+        
+        .message-sent {
+            background-color: #818CF8;
             color: white;
-            font-size: 2rem;
-            font-weight: 600;
-            margin: 0 auto 15px;
+            border-top-right-radius: 4px;
+            margin-left: auto;
         }
-
-        .user-name {
-            font-weight: 600;
-            margin-bottom: 5px;
+        
+        .message-received {
+            background-color: #E5E7EB;
+            color: #374151;
+            border-top-left-radius: 4px;
         }
-
-        .user-email {
-            color: var(--gray);
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            nav ul {
-                gap: 10px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .chat-container {
-                flex-direction: column;
-                height: auto;
-            }
-
-            .conversations-sidebar {
-                flex: none;
-                height: 250px;
-                border-right: none;
-                border-bottom: 1px solid #eee;
-            }
-
-            .user-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Footer */
-        footer {
-            background-color: white;
-            padding: 20px 0;
-            text-align: center;
-            margin-top: auto;
-        }
-
-        .footer-content {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .social-links {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .social-links a {
-            color: var(--primary);
-            font-size: 1.2rem;
-        }
-
-        /* Notifications */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 5px;
-            color: white;
-            z-index: 1000;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 0.3s ease;
-        }
-
-        .notification.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .notification.success {
-            background-color: var(--success);
-        }
-
-        .notification.error {
-            background-color: var(--danger);
-        }
-
-        /* Loading spinner */
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 20px auto;
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: var(--primary);
+        
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #8B5CF6;
             border-radius: 50%;
+            width: 20px;
+            height: 20px;
             animation: spin 1s linear infinite;
+            display: inline-block;
         }
-
+        
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Notification System -->
-    <div class="notification" id="notification"></div>
+    <div id="notification" class="fixed top-4 right-4 z-50 max-w-sm rounded-lg shadow-lg p-4 hidden text-white" role="alert"></div>
 
     <!-- Header -->
-    <header>
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-comments"></i>
-                    <span>ChatApp</span>
+    <header class="bg-white shadow-sm py-4 sticky top-0 z-30">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-comments text-indigo-600 text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">ChatApp</h1>
+            </div>
+            
+            <nav class="hidden md:flex space-x-6" aria-label="Main navigation">
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="home">Home</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="chat">Chat</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="users">Users</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="about">About</a>
+            </nav>
+            
+            <div class="flex items-center space-x-4" id="auth-buttons">
+                <button id="login-btn" class="px-4 py-2 text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium">Login</button>
+                <button id="register-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">Register</button>
+            </div>
+            
+            <div class="hidden items-center space-x-4" id="user-info">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium" id="user-avatar"></div>
+                    <span class="text-gray-700 font-medium" id="username-display"></span>
                 </div>
-                <nav>
-                    <ul>
-                        <li><a href="#" class="nav-link active" data-page="home">Home</a></li>
-                        <li><a href="#" class="nav-link" data-page="chat">Chat</a></li>
-                        <li><a href="#" class="nav-link" data-page="users">Users</a></li>
-                        <li><a href="#" class="nav-link" data-page="about">About</a></li>
-                    </ul>
-                </nav>
-                <div class="user-actions" id="user-actions">
-                    <button class="btn btn-outline" id="login-btn">Login</button>
-                    <button class="btn btn-primary" id="register-btn">Register</button>
-                </div>
-                <div class="user-info" id="user-info" style="display: none;">
-                    <span id="username-display"></span>
-                    <button class="btn btn-outline" id="logout-btn">Logout</button>
-                </div>
+                <button id="logout-btn" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium">Logout</button>
+            </div>
+            
+            <!-- Mobile menu button -->
+            <button id="mobile-menu-btn" class="md:hidden text-gray-600">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t mt-4 py-4 px-4 absolute w-full left-0">
+            <div class="flex flex-col space-y-4">
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="home">Home</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="chat">Chat</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="users">Users</a>
+                <a href="#" class="nav-link text-gray-600 hover:text-indigo-600 transition-colors font-medium" data-page="about">About</a>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main>
-        <div class="container">
-            <!-- Home Page -->
-            <div class="page active" id="home">
-                <h1 class="page-title">Welcome to ChatApp</h1>
-                <div class="hero-section">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h2 style="font-size: 2.2rem; margin-bottom: 15px; color: var(--primary);">Connect with Friends in Real-Time</h2>
-                        <p style="font-size: 1.2rem; color: var(--gray); max-width: 700px; margin: 0 auto;">A modern, responsive chat application that lets you stay connected with your friends and colleagues through instant messaging.</p>
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <!-- Home Page -->
+        <section id="home-page" class="page page-transition">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Connect with Friends in Real-Time</h2>
+                <p class="text-xl text-gray-600 mb-8">A modern chat application that lets you stay connected with your friends and colleagues through instant messaging.</p>
+                <button id="get-started-btn" class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-lg">Get Started</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-comment-dots text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Real-time Messaging</h3>
+                    <p class="text-gray-600">Send and receive messages instantly with our real-time communication technology.</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-users text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Group Chats</h3>
+                    <p class="text-gray-600">Create group conversations and chat with multiple people at the same time.</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition-shadow">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-alt text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Secure</h3>
+                    <p class="text-gray-600">Your conversations are encrypted and secure with our advanced security measures.</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-6 text-center">How It Works</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-indigo-600 font-bold">1</span>
+                        </div>
+                        <h4 class="font-medium text-gray-800">Create Account</h4>
+                        <p class="text-sm text-gray-600 mt-1">Sign up with your email</p>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 40px;">
-                        <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 25px; border-radius: 10px;">
-                            <i class="fas fa-comment-dots" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
-                            <h3 style="margin-bottom: 15px;">Real-time Messaging</h3>
-                            <p>Send and receive messages instantly with our real-time communication technology.</p>
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-indigo-600 font-bold">2</span>
                         </div>
-                        
-                        <div style="background: linear-gradient(135deg, var(--info), #42a5f5); color: white; padding: 25px; border-radius: 10px;">
-                            <i class="fas fa-users" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
-                            <h3 style="margin-bottom: 15px;">Group Chats</h3>
-                            <p>Create group conversations and chat with multiple people at the same time.</p>
+                        <h4 class="font-medium text-gray-800">Find Friends</h4>
+                        <p class="text-sm text-gray-600 mt-1">Connect with other users</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-indigo-600 font-bold">3</span>
                         </div>
-                        
-                        <div style="background: linear-gradient(135deg, var(--success), #66bb6a); color: white; padding: 25px; border-radius: 10px;">
-                            <i class="fas fa-shield-alt" style="font-size: 2.5rem; margin-bottom: 15px;"></i>
-                            <h3 style="margin-bottom: 15px;">Secure</h3>
-                            <p>Your conversations are encrypted and secure with our advanced security measures.</p>
+                        <h4 class="font-medium text-gray-800">Start Chatting</h4>
+                        <p class="text-sm text-gray-600 mt-1">Send your first message</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-indigo-600 font-bold">4</span>
+                        </div>
+                        <h4 class="font-medium text-gray-800">Enjoy</h4>
+                        <p class="text-sm text-gray-600 mt-1">Stay connected anytime</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Login Page -->
+        <section id="login-page" class="page hidden page-transition">
+            <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Login to Your Account</h2>
+                <form id="login-form">
+                    <div class="mb-4">
+                        <label for="login-username" class="block text-gray-700 font-medium mb-2">Username</label>
+                        <input type="text" id="login-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Enter your username" required>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-gray-700 font-medium mb-2">Password</label>
+                        <input type="password" id="login-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Enter your password" required>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center">
+                        <span id="login-btn-text">Login</span>
+                        <span id="login-spinner" class="loading-spinner ml-2 hidden"></span>
+                    </button>
+                    
+                    <p class="text-center text-gray-600 mt-6">
+                        Don't have an account? 
+                        <a href="#" id="goto-register" class="text-indigo-600 hover:text-indigo-800 font-medium">Register here</a>
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Register Page -->
+        <section id="register-page" class="page hidden page-transition">
+            <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Create an Account</h2>
+                <form id="register-form">
+                    <div class="mb-4">
+                        <label for="register-username" class="block text-gray-700 font-medium mb-2">Username</label>
+                        <input type="text" id="register-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Choose a username" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-gray-700 font-medium mb-2">Email</label>
+                        <input type="email" id="register-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="register-password" class="block text-gray-700 font-medium mb-2">Password</label>
+                        <input type="password" id="register-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Create a password" required>
+                        <p class="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="register-confirm-password" class="block text-gray-700 font-medium mb-2">Confirm Password</label>
+                        <input type="password" id="register-confirm-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Confirm your password" required>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center justify-center">
+                        <span id="register-btn-text">Register</span>
+                        <span id="register-spinner" class="loading-spinner ml-2 hidden"></span>
+                    </button>
+                    
+                    <p class="text-center text-gray-600 mt-6">
+                        Already have an account? 
+                        <a href="#" id="goto-login" class="text-indigo-600 hover:text-indigo-800 font-medium">Login here</a>
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Chat Page -->
+        <section id="chat-page" class="page hidden page-transition">
+            <div class="flex flex-col md:flex-row h-[70vh] bg-white rounded-xl shadow-md overflow-hidden">
+                <!-- Conversations sidebar -->
+                <div class="w-full md:w-1/4 border-r border-gray-200 flex flex-col">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800">Conversations</h2>
+                        <button id="new-chat-btn" class="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto custom-scrollbar" id="conversation-list">
+                        <!-- Conversations will be loaded here -->
+                        <div class="p-8 text-center text-gray-500">
+                            <i class="fas fa-comments text-3xl mb-3 text-gray-300"></i>
+                            <p>No conversations yet</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat main area -->
+                <div class="flex-1 flex flex-col">
+                    <div class="p-4 border-b border-gray-200 flex items-center space-x-3" id="chat-header">
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium" id="current-chat-avatar">CH</div>
+                            <div class="online-indicator absolute bottom-0 right-0" id="current-chat-status-indicator"></div>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-800" id="current-chat-name">Select a conversation</h3>
+                            <p class="text-sm text-gray-500" id="current-chat-status">Start chatting</p>
                         </div>
                     </div>
                     
-                    <div style="text-align: center; margin-top: 40px;">
-                        <button class="btn btn-primary" style="padding: 12px 30px; font-size: 1.1rem;" id="get-started-btn">Get Started</button>
+                    <div class="flex-1 overflow-y-auto p-4 custom-scrollbar" id="chat-messages">
+                        <!-- Messages will be displayed here -->
+                        <div class="h-full flex flex-col items-center justify-center text-gray-500">
+                            <i class="fas fa-comments text-4xl mb-3 text-gray-300"></i>
+                            <p>Select a conversation to start messaging</p>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Login Page -->
-            <div class="page" id="login">
-                <h1 class="page-title">Login to Your Account</h1>
-                <div class="auth-container">
-                    <form id="login-form">
-                        <div class="form-group">
-                            <label for="login-username">Username</label>
-                            <input type="text" id="login-username" class="form-control" placeholder="Enter your username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="login-password">Password</label>
-                            <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
-                    </form>
-                    <p style="text-align: center; margin-top: 20px;">
-                        Don't have an account? <a href="#" id="goto-register" style="color: var(--primary); text-decoration: none;">Register here</a>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Register Page -->
-            <div class="page" id="register">
-                <h1 class="page-title">Create an Account</h1>
-                <div class="auth-container">
-                    <form id="register-form">
-                        <div class="form-group">
-                            <label for="register-username">Username</label>
-                            <input type="text" id="register-username" class="form-control" placeholder="Choose a username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-email">Email</label>
-                            <input type="email" id="register-email" class="form-control" placeholder="Enter your email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-password">Password</label>
-                            <input type="password" id="register-password" class="form-control" placeholder="Create a password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-confirm-password">Confirm Password</label>
-                            <input type="password" id="register-confirm-password" class="form-control" placeholder="Confirm your password" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width: 100%;">Register</button>
-                    </form>
-                    <p style="text-align: center; margin-top: 20px;">
-                        Already have an account? <a href="#" id="goto-login" style="color: var(--primary); text-decoration: none;">Login here</a>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Chat Page -->
-            <div class="page" id="chat">
-                <h1 class="page-title">Your Conversations</h1>
-                <div class="chat-container">
-                    <div class="conversations-sidebar">
-                        <div class="conversations-header">
-                            <h3>Conversations</h3>
-                            <button class="btn btn-primary" id="new-chat-btn">
-                                <i class="fas fa-plus"></i> New
-                            </button>
-                        </div>
-                        <ul class="conversation-list" id="conversation-list">
-                            <div class="spinner" id="conversations-spinner"></div>
-                        </ul>
-                    </div>
-                    <div class="chat-main">
-                        <div class="chat-header" id="chat-header">
-                            <div class="avatar">CH</div>
-                            <div>
-                                <div class="conversation-name">Select a conversation</div>
-                                <div style="font-size: 0.9rem; color: var(--gray);">Start chatting</div>
-                            </div>
-                        </div>
-                        <div class="chat-messages" id="chat-messages">
-                            <div style="text-align: center; padding: 30px; color: var(--gray);">
-                                <i class="fas fa-comments" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                                <p>Select a conversation to start messaging</p>
-                            </div>
-                        </div>
-                        <div class="chat-input" id="chat-input" style="display: none;">
-                            <input type="text" class="message-input" id="message-input" placeholder="Type a message...">
-                            <button class="send-btn" id="send-btn">
+                    
+                    <div class="p-4 border-t border-gray-200 hidden" id="chat-input">
+                        <div class="flex space-x-2">
+                            <input type="text" id="message-input" placeholder="Type your message..." class="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                            <button id="send-btn" class="w-10 h-10 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors flex items-center justify-center">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- Users Page -->
-            <div class="page" id="users">
-                <h1 class="page-title">All Users</h1>
-                <div class="user-grid" id="user-grid">
-                    <div class="spinner" id="users-spinner"></div>
+        <!-- Users Page -->
+        <section id="users-page" class="page hidden page-transition">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">All Users</h2>
+                <div class="relative w-64">
+                    <input type="text" id="user-search" placeholder="Search users..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                 </div>
             </div>
-
-            <!-- About Page -->
-            <div class="page" id="about">
-                <h1 class="page-title">About ChatApp</h1>
-                <div style="max-width: 800px; margin: 0 auto;">
-                    <div style="margin-bottom: 30px;">
-                        <h2 style="margin-bottom: 15px; color: var(--primary);">Our Mission</h2>
-                        <p style="line-height: 1.6;">ChatApp is designed to bring people together through seamless, real-time communication. Our mission is to create a platform that is both easy to use and powerful enough for all your communication needs.</p>
-                    </div>
-                    
-                    <div style="margin-bottom: 30px;">
-                        <h2 style="margin-bottom: 15px; color: var(--primary);">Features</h2>
-                        <ul style="list-style-type: none;">
-                            <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                                <i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i>
-                                <strong>Real-time messaging</strong> - Instantly send and receive messages
-                            </li>
-                            <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                                <i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i>
-                                <strong>User profiles</strong> - Create and customize your profile
-                            </li>
-                            <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                                <i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i>
-                                <strong>Group chats</strong> - Communicate with multiple people at once
-                            </li>
-                            <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                                <i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i>
-                                <strong>Secure</strong> - Your data is encrypted and protected
-                            </li>
-                            <li style="padding: 10px 0;">
-                                <i class="fas fa-check-circle" style="color: var(--success); margin-right: 10px;"></i>
-                                <strong>Responsive design</strong> - Works on desktop, tablet, and mobile
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div>
-                        <h2 style="margin-bottom: 15px; color: var(--primary);">Technology</h2>
-                        <p style="line-height: 1.6;">ChatApp is built with modern web technologies including Node.js, Express, Socket.io for real-time communication, and MongoDB for data storage. The frontend is designed with responsive HTML5, CSS3, and JavaScript.</p>
-                    </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="user-grid">
+                <!-- Users will be loaded here -->
+                <div class="p-8 text-center text-gray-500">
+                    <i class="fas fa-users text-3xl mb-3 text-gray-300"></i>
+                    <p>No users found</p>
                 </div>
             </div>
-        </div>
+        </section>
+
+        <!-- About Page -->
+        <section id="about-page" class="page hidden page-transition">
+            <div class="max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">About ChatApp</h2>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Our Mission</h3>
+                    <p class="text-gray-600 mb-4">ChatApp is designed to bring people together through seamless, real-time communication. Our mission is to create a platform that is both easy to use and powerful enough for all your communication needs.</p>
+                    <p class="text-gray-600">Whether you're connecting with friends, family, or colleagues, ChatApp provides a reliable and enjoyable messaging experience.</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Features</h3>
+                    <ul class="space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span class="text-gray-600"><strong>Real-time messaging</strong> - Instantly send and receive messages</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span class="text-gray-600"><strong>User profiles</strong> - Create and customize your profile</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span class="text-gray-600"><strong>Group chats</strong> - Communicate with multiple people at once</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span class="text-gray-600"><strong>Secure</strong> - Your data is encrypted and protected</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                            <span class="text-gray-600"><strong>Responsive design</strong> - Works on desktop, tablet, and mobile</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Technology</h3>
+                    <p class="text-gray-600 mb-4">ChatApp is built with modern web technologies including Node.js, Express, Socket.io for real-time communication, and MongoDB for data storage. The frontend is designed with responsive HTML5, CSS3, and JavaScript.</p>
+                    <p class="text-gray-600">Our commitment to using industry-standard technologies ensures a fast, secure, and reliable messaging experience for all users.</p>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="logo" style="justify-content: center;">
-                    <i class="fas fa-comments"></i>
-                    <span>ChatApp</span>
+    <footer class="bg-white border-t border-gray-200 py-6 mt-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-2 mb-4 md:mb-0">
+                    <i class="fas fa-comments text-indigo-600"></i>
+                    <span class="text-gray-700 font-medium">ChatApp</span>
                 </div>
-                <div class="social-links">
-                    <a href="#"><i class="fab fa-facebook"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-linkedin"></i></a>
-                </div>
-                <p>&copy; 2023 ChatApp. All rights reserved.</p>
+                
+                
+                <p class="text-gray-600 text-sm">&copy; 2025 ChatApp. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
     <script>
-        // Configuration
+        // Global variables
         const API_BASE_URL = 'http://localhost:5000/api';
         let socket = null;
         let currentUser = null;
         let currentConversationId = null;
+        let conversations = [];
+        let users = [];
+        let typingTimeout = null;
+        let onlineUsers = new Set();
 
         // DOM Elements
         const notificationEl = document.getElementById('notification');
-        const userActionsEl = document.getElementById('user-actions');
+        const authButtonsEl = document.getElementById('auth-buttons');
         const userInfoEl = document.getElementById('user-info');
         const usernameDisplayEl = document.getElementById('username-display');
+        const userAvatarEl = document.getElementById('user-avatar');
         const logoutBtn = document.getElementById('logout-btn');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const getStartedBtn = document.getElementById('get-started-btn');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const pages = document.querySelectorAll('.page');
+        const navLinks = document.querySelectorAll('.nav-link');
         const chatInputEl = document.getElementById('chat-input');
         const conversationListEl = document.getElementById('conversation-list');
         const chatMessagesEl = document.getElementById('chat-messages');
         const messageInputEl = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
         const chatHeaderEl = document.getElementById('chat-header');
+        const currentChatAvatarEl = document.getElementById('current-chat-avatar');
+        const currentChatNameEl = document.getElementById('current-chat-name');
+        const currentChatStatusEl = document.getElementById('current-chat-status');
+        const currentChatStatusIndicatorEl = document.getElementById('current-chat-status-indicator');
         const userGridEl = document.getElementById('user-grid');
+        const userSearchEl = document.getElementById('user-search');
+        const loginSpinner = document.getElementById('login-spinner');
+        const loginBtnText = document.getElementById('login-btn-text');
+        const registerSpinner = document.getElementById('register-spinner');
+        const registerBtnText = document.getElementById('register-btn-text');
 
-        // Utility Functions
-        function showNotification(message, type = 'success') {
-            notificationEl.textContent = message;
-            notificationEl.className = `notification ${type} show`;
+        // Initialize the application
+        function init() {
+            checkAuthStatus();
+            setupEventListeners();
+        }
+
+        // Check if user is authenticated
+        function checkAuthStatus() {
+            const token = localStorage.getItem('chatToken');
+            const userData = localStorage.getItem('userData');
             
-            setTimeout(() => {
-                notificationEl.classList.remove('show');
-            }, 3000);
-        }
-
-        function getAuthToken() {
-            return localStorage.getItem('chatToken');
-        }
-
-        function setAuthToken(token) {
-            localStorage.setItem('chatToken', token);
-        }
-
-        function removeAuthToken() {
-            localStorage.removeItem('chatToken');
-        }
-
-        function isLoggedIn() {
-            return !!getAuthToken();
-        }
-
-        function updateUIForAuthState() {
-            if (isLoggedIn()) {
-                userActionsEl.style.display = 'none';
-                userInfoEl.style.display = 'flex';
-                // Load user data if needed
-            } else {
-                userActionsEl.style.display = 'flex';
-                userInfoEl.style.display = 'none';
+            if (token && userData) {
+                try {
+                    currentUser = JSON.parse(userData);
+                    updateUIForAuthState(true);
+                    initializeSocketConnection();
+                } catch (e) {
+                    console.error('Error parsing user data:', e);
+                    localStorage.removeItem('chatToken');
+                    localStorage.removeItem('userData');
+                }
             }
         }
 
-        // API Functions
-        async function apiRequest(url, options = {}) {
-            const token = getAuthToken();
-            const headers = {
-                'Content-Type': 'application/json',
-                ...options.headers
-            };
-
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}${url}`, {
-                    ...options,
-                    headers
+        // Setup all event listeners
+        function setupEventListeners() {
+            // Navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = link.getAttribute('data-page');
+                    showPage(pageId);
                 });
+            });
 
-                if (response.status === 401) {
-                    // Token expired or invalid
-                    removeAuthToken();
-                    showNotification('Session expired. Please login again.', 'error');
-                    setTimeout(() => {
-                        showPage('login');
-                    }, 2000);
-                    throw new Error('Authentication failed');
+            // Mobile menu
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Auth buttons
+            loginBtn.addEventListener('click', () => showPage('login'));
+            registerBtn.addEventListener('click', () => showPage('register'));
+            logoutBtn.addEventListener('click', handleLogout);
+            getStartedBtn.addEventListener('click', () => {
+                if (currentUser) {
+                    showPage('chat');
+                } else {
+                    showPage('register');
                 }
+            });
 
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.message || 'Request failed');
+            // Auth form submissions
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            
+            // Auth redirect links
+            document.getElementById('goto-login').addEventListener('click', (e) => {
+                e.preventDefault();
+                showPage('login');
+            });
+            document.getElementById('goto-register').addEventListener('click', (e) => {
+                e.preventDefault();
+                showPage('register');
+            });
+
+            // Chat functionality
+            document.getElementById('new-chat-btn').addEventListener('click', showUsersPage);
+            sendBtn.addEventListener('click', sendMessage);
+            messageInputEl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
                 }
+            });
 
-                return data;
-            } catch (error) {
-                console.error('API request error:', error);
-                showNotification(error.message || 'An error occurred', 'error');
-                throw error;
-            }
+            // Typing indicators
+            messageInputEl.addEventListener('input', handleTyping);
+            
+            // User search
+            userSearchEl.addEventListener('input', debounce(searchUsers, 300));
         }
 
-        // Authentication Functions
-        async function login(username, password) {
+        // Show specific page
+        function showPage(pageId) {
+            // Hide all pages
+            pages.forEach(page => {
+                page.classList.add('hidden');
+            });
+
+            // Show the requested page
+            document.getElementById(`${pageId}-page`).classList.remove('hidden');
+
+            // Update active nav link
+            navLinks.forEach(link => {
+                if (link.getAttribute('data-page') === pageId) {
+                    link.classList.add('text-indigo-600');
+                } else {
+                    link.classList.remove('text-indigo-600');
+                }
+            });
+
+            // Load page-specific data
+            if (pageId === 'chat' && currentUser) {
+                loadConversations();
+            } else if (pageId === 'users' && currentUser) {
+                loadUsers();
+            }
+
+            // Close mobile menu if open
+            mobileMenu.classList.add('hidden');
+        }
+
+        // Handle login form submission
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            // Show loading state
+            loginSpinner.classList.remove('hidden');
+            loginBtnText.textContent = 'Logging in...';
+            
             try {
-                const data = await apiRequest('/auth/login', {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ username, password })
                 });
-
-                setAuthToken(data.token);
-                currentUser = data.user;
-                usernameDisplayEl.textContent = currentUser.username;
-                updateUIForAuthState();
-                showNotification('Login successful!');
-                initializeSocketConnection();
-                showPage('chat');
-                loadConversations();
-                return true;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    localStorage.setItem('chatToken', data.token);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                    
+                    updateUIForAuthState(true);
+                    initializeSocketConnection();
+                    showNotification('Login successful!', 'success');
+                    showPage('chat');
+                } else {
+                    showNotification(data.message, 'error');
+                }
             } catch (error) {
+                showNotification('Login failed. Please try again.', 'error');
                 console.error('Login error:', error);
-                return false;
+            } finally {
+                // Reset loading state
+                loginSpinner.classList.add('hidden');
+                loginBtnText.textContent = 'Login';
             }
         }
 
-        async function register(username, email, password) {
+        // Handle register form submission
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+            
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            // Show loading state
+            registerSpinner.classList.remove('hidden');
+            registerBtnText.textContent = 'Registering...';
+            
             try {
-                const data = await apiRequest('/auth/register', {
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ username, email, password })
                 });
-
-                showNotification('Registration successful! Please login.');
-                showPage('login');
-                return true;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    localStorage.setItem('chatToken', data.token);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                    
+                    updateUIForAuthState(true);
+                    initializeSocketConnection();
+                    showNotification('Registration successful!', 'success');
+                    showPage('chat');
+                } else {
+                    showNotification(data.message, 'error');
+                }
             } catch (error) {
+                showNotification('Registration failed. Please try again.', 'error');
                 console.error('Registration error:', error);
-                return false;
+            } finally {
+                // Reset loading state
+                registerSpinner.classList.add('hidden');
+                registerBtnText.textContent = 'Register';
             }
         }
 
-        function logout() {
-            removeAuthToken();
-            currentUser = null;
+        // Handle logout
+        function handleLogout() {
+            localStorage.removeItem('chatToken');
+            localStorage.removeItem('userData');
+            
             if (socket) {
                 socket.disconnect();
                 socket = null;
             }
-            updateUIForAuthState();
-            showNotification('Logged out successfully');
+            
+            currentUser = null;
+            updateUIForAuthState(false);
+            showNotification('Logged out successfully', 'success');
             showPage('home');
         }
 
-        // Socket.IO Functions
-        function initializeSocketConnection() {
-            if (!isLoggedIn()) return;
-            
-            if (socket) {
-                socket.disconnect();
+        // Update UI based on authentication state
+        function updateUIForAuthState(isAuthenticated) {
+            if (isAuthenticated) {
+                authButtonsEl.classList.add('hidden');
+                userInfoEl.classList.remove('hidden');
+                usernameDisplayEl.textContent = currentUser.username;
+                userAvatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+            } else {
+                authButtonsEl.classList.remove('hidden');
+                userInfoEl.classList.add('hidden');
             }
+        }
 
+        // Initialize socket connection
+        function initializeSocketConnection() {
+            if (!currentUser) return;
+            
+            // Connect to the server
             socket = io('http://localhost:5000', {
                 auth: {
-                    token: getAuthToken()
+                    token: localStorage.getItem('chatToken')
                 }
             });
 
+            // Socket event handlers
             socket.on('connect', () => {
                 console.log('Connected to server');
+                showNotification('Connected to chat', 'success');
             });
 
             socket.on('disconnect', () => {
                 console.log('Disconnected from server');
+                showNotification('Disconnected from chat', 'error');
             });
 
             socket.on('receive_message', (message) => {
                 if (message.conversationId === currentConversationId) {
-                    displayMessage(message, false);
+                    displayMessage(message, message.senderId._id === currentUser.id);
+                }
+                
+                // Update conversation list with new message
+                updateConversationLastMessage(message.conversationId, message.text);
+            });
+
+            socket.on('user_typing', (data) => {
+                if (data.conversationId === currentConversationId) {
+                    showTypingIndicator(data.userId);
                 }
             });
 
-            socket.on('typing', (data) => {
-                // Handle typing indicator
-                console.log('User typing:', data);
+            socket.on('user_stop_typing', (data) => {
+                if (data.conversationId === currentConversationId) {
+                    hideTypingIndicator();
+                }
             });
 
-            socket.on('stop_typing', (data) => {
-                // Handle stop typing indicator
-                console.log('User stopped typing:', data);
+            socket.on('user_online', (userId) => {
+                onlineUsers.add(userId);
+                updateOnlineStatus();
             });
 
-            socket.on('read_receipt', (data) => {
-                // Handle read receipts
-                console.log('Message read by:', data);
+            socket.on('user_offline', (userId) => {
+                onlineUsers.delete(userId);
+                updateOnlineStatus();
             });
 
-            socket.on('connect_error', (error) => {
-                console.error('Socket connection error:', error);
-                showNotification('Connection error', 'error');
+            socket.on('error', (error) => {
+                showNotification(error.message, 'error');
             });
         }
 
-        // Conversation Functions
+        // Handle typing indicator
+        function handleTyping() {
+            if (!socket || !currentConversationId) return;
+            
+            socket.emit('typing', {
+                conversationId: currentConversationId
+            });
+            
+            // Clear previous timeout
+            if (typingTimeout) clearTimeout(typingTimeout);
+            
+            // Set new timeout
+            typingTimeout = setTimeout(() => {
+                socket.emit('stop_typing', {
+                    conversationId: currentConversationId
+                });
+            }, 1000);
+        }
+
+        // Show typing indicator
+        function showTypingIndicator(userId) {
+            // Find user by ID and show typing indicator
+            const user = users.find(u => u._id === userId);
+            if (user) {
+                const typingIndicator = document.getElementById('typing-indicator');
+                if (!typingIndicator) {
+                    const indicator = document.createElement('div');
+                    indicator.id = 'typing-indicator';
+                    indicator.className = 'typing-indicator mt-2';
+                    indicator.innerHTML = `
+                        <span class="mr-2">${user.username} is typing</span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    `;
+                    chatMessagesEl.appendChild(indicator);
+                    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                }
+            }
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // Load conversations
         async function loadConversations() {
             try {
-                const data = await apiRequest('/conversations');
-                renderConversations(data.conversations);
+                const token = localStorage.getItem('chatToken');
+                const response = await fetch(`${API_BASE_URL}/conversations`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    conversations = data.conversations;
+                    renderConversations();
+                } else {
+                    showNotification('Failed to load conversations', 'error');
+                }
             } catch (error) {
+                showNotification('Error loading conversations', 'error');
                 console.error('Error loading conversations:', error);
             }
         }
 
-        function renderConversations(conversations) {
+        // Render conversations list
+        function renderConversations() {
             conversationListEl.innerHTML = '';
             
             if (conversations.length === 0) {
-                conversationListEl.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--gray);">No conversations yet</p>';
+                conversationListEl.innerHTML = `
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-comments text-3xl mb-3 text-gray-300"></i>
+                        <p>No conversations yet</p>
+                    </div>
+                `;
                 return;
             }
             
             conversations.forEach(conversation => {
-                const li = document.createElement('li');
-                li.className = 'conversation-item';
-                li.dataset.id = conversation._id;
+                // For private conversations, find the other participant
+                let conversationName = conversation.name;
+                let avatarText = conversationName.charAt(0).toUpperCase();
                 
-                // Get the other participant's name for private chats
-                let conversationName = 'Unknown';
-                let avatarText = '?';
-                
-                if (conversation.type === 'private' && conversation.participants) {
+                if (conversation.type === 'private') {
                     const otherParticipant = conversation.participants.find(p => p._id !== currentUser.id);
                     if (otherParticipant) {
                         conversationName = otherParticipant.username;
                         avatarText = otherParticipant.username.charAt(0).toUpperCase();
                     }
-                } else if (conversation.type === 'group') {
-                    conversationName = 'Group Chat';
-                    avatarText = 'G';
                 }
                 
-                li.innerHTML = `
-                    <div class="avatar">${avatarText}</div>
-                    <div class="conversation-info">
-                        <div class="conversation-name">${conversationName}</div>
-                        <div class="conversation-preview">${conversation.lastMessage || 'Start a conversation'}</div>
+                const conversationEl = document.createElement('div');
+                conversationEl.className = 'p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors';
+                conversationEl.dataset.conversationId = conversation._id;
+                conversationEl.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium">
+                            ${avatarText}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-medium text-gray-800 truncate">${conversationName}</h4>
+                            <p class="text-sm text-gray-500 truncate">${conversation.lastMessage || 'Start a conversation'}</p>
+                        </div>
+                        ${conversation.type === 'group' ? '<i class="fas fa-users text-gray-400"></i>' : ''}
                     </div>
                 `;
                 
-                li.addEventListener('click', () => {
-                    selectConversation(conversation._id, conversationName, avatarText);
+                conversationEl.addEventListener('click', () => {
+                    selectConversation(conversation._id, conversationName, conversation.type);
                 });
                 
-                conversationListEl.appendChild(li);
+                conversationListEl.appendChild(conversationEl);
             });
         }
 
-        async function selectConversation(conversationId, conversationName, avatarText) {
+        // Update conversation last message
+        function updateConversationLastMessage(conversationId, message) {
+            const conversationEl = conversationListEl.querySelector(`[data-conversation-id="${conversationId}"]`);
+            if (conversationEl) {
+                const messageEl = conversationEl.querySelector('p');
+                if (messageEl) {
+                    messageEl.textContent = message.length > 30 ? message.substring(0, 30) + '...' : message;
+                }
+            }
+        }
+
+        // Select a conversation
+        async function selectConversation(conversationId, conversationName, conversationType) {
             currentConversationId = conversationId;
             
-            // Update UI
-            document.querySelectorAll('.conversation-item').forEach(item => {
-                item.classList.remove('active');
+            // Remove active class from all conversations
+            document.querySelectorAll('#conversation-list > div').forEach(el => {
+                el.classList.remove('conversation-active');
             });
-            document.querySelector(`.conversation-item[data-id="${conversationId}"]`).classList.add('active');
             
-            chatHeaderEl.innerHTML = `
-                <div class="avatar">${avatarText}</div>
-                <div>
-                    <div class="conversation-name">${conversationName}</div>
-                    <div style="font-size: 0.9rem; color: var(--gray);">Online</div>
-                </div>
-            `;
+            // Add active class to selected conversation
+            const selectedConversation = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+            if (selectedConversation) {
+                selectedConversation.classList.add('conversation-active');
+            }
             
-            chatInputEl.style.display = 'flex';
-            await loadMessages(conversationId);
+            // Update chat header
+            currentChatNameEl.textContent = conversationName;
+            currentChatAvatarEl.textContent = conversationName.charAt(0).toUpperCase();
+            
+            // Update online status
+            if (conversationType === 'private') {
+                const otherParticipant = conversations
+                    .find(c => c._id === conversationId)
+                    .participants.find(p => p._id !== currentUser.id);
+                
+                if (otherParticipant && onlineUsers.has(otherParticipant._id)) {
+                    currentChatStatusEl.textContent = 'Online';
+                    currentChatStatusIndicatorEl.className = 'online-indicator absolute bottom-0 right-0';
+                } else {
+                    currentChatStatusEl.textContent = 'Offline';
+                    currentChatStatusIndicatorEl.className = 'offline-indicator absolute bottom-0 right-0';
+                }
+            } else {
+                currentChatStatusEl.textContent = 'Group';
+                currentChatStatusIndicatorEl.className = 'offline-indicator absolute bottom-0 right-0';
+            }
+            
+            // Show message input
+            chatInputEl.classList.remove('hidden');
+            
+            // Load messages for this conversation
+            loadMessages(conversationId);
             
             // Join the conversation room
             if (socket) {
@@ -999,266 +1007,292 @@
             }
         }
 
+        // Load messages for a conversation
         async function loadMessages(conversationId) {
             try {
-                chatMessagesEl.innerHTML = '<div class="spinner"></div>';
-                const data = await apiRequest(`/messages/${conversationId}`);
-                renderMessages(data.messages);
+                const token = localStorage.getItem('chatToken');
+                const response = await fetch(`${API_BASE_URL}/messages/${conversationId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderMessages(data.messages);
+                } else {
+                    showNotification('Failed to load messages', 'error');
+                }
             } catch (error) {
+                showNotification('Error loading messages', 'error');
                 console.error('Error loading messages:', error);
-                chatMessagesEl.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--danger);">Error loading messages</p>';
             }
         }
 
+        // Render messages
         function renderMessages(messages) {
             chatMessagesEl.innerHTML = '';
             
             if (messages.length === 0) {
-                chatMessagesEl.innerHTML = '<p style="text-align: center; padding: 30px; color: var(--gray);">No messages yet. Start the conversation!</p>';
+                chatMessagesEl.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-gray-500">
+                        <i class="fas fa-comments text-4xl mb-3 text-gray-300"></i>
+                        <p>No messages yet. Start the conversation!</p>
+                    </div>
+                `;
                 return;
             }
             
+            // Sort messages by timestamp (oldest first)
+            messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            
             messages.forEach(message => {
-                displayMessage(message, message.senderId === currentUser.id);
+                displayMessage(message, message.senderId._id === currentUser.id);
             });
             
             // Scroll to bottom
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         }
 
+        // Display a single message
         function displayMessage(message, isSent) {
             const messageEl = document.createElement('div');
-            messageEl.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageEl.className = `message-enter flex ${isSent ? 'justify-end' : 'justify-start'} mb-4`;
             
-            const time = new Date(message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const messageTime = new Date(message.createdAt).toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
             
             messageEl.innerHTML = `
-                ${!isSent ? `<div class="message-sender">${message.senderId.username || 'Unknown'}</div>` : ''}
-                <div class="message-content">${message.text}</div>
-                <div class="message-time">${time}</div>
+                <div class="max-w-xs md:max-w-md ${isSent ? 'message-sent' : 'message-received'} rounded-2xl px-4 py-2">
+                    ${!isSent ? `<div class="font-medium text-sm mb-1">${message.senderId.username}</div>` : ''}
+                    <div class="text-sm">${message.text}</div>
+                    <div class="text-xs ${isSent ? 'text-indigo-200' : 'text-gray-500'} text-right mt-1">
+                        ${messageTime}
+                    </div>
+                </div>
             `;
             
             chatMessagesEl.appendChild(messageEl);
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         }
 
+        // Send a message
         async function sendMessage() {
             const text = messageInputEl.value.trim();
             if (!text || !currentConversationId) return;
             
-            try {
-                if (socket) {
-                    socket.emit('send_message', {
-                        conversationId: currentConversationId,
-                        text: text,
-                        attachmentsMeta: []
-                    });
-                    
-                    // Optimistically add the message to the UI
-                    const tempMessage = {
-                        _id: Date.now().toString(),
-                        text: text,
-                        senderId: currentUser.id,
-                        createdAt: new Date(),
-                        conversationId: currentConversationId
-                    };
-                    
-                    displayMessage(tempMessage, true);
-                    messageInputEl.value = '';
-                } else {
-                    throw new Error('Not connected to server');
-                }
-            } catch (error) {
-                console.error('Error sending message:', error);
-                showNotification('Failed to send message', 'error');
+            if (socket) {
+                socket.emit('send_message', {
+                    conversationId: currentConversationId,
+                    text: text
+                });
+                
+                // Clear input
+                messageInputEl.value = '';
+            } else {
+                showNotification('Not connected to chat server', 'error');
             }
         }
 
-        // User Functions
+        // Load users
         async function loadUsers() {
             try {
-                const data = await apiRequest('/users');
-                renderUsers(data.users);
+                const token = localStorage.getItem('chatToken');
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    users = data.users;
+                    renderUsers();
+                } else {
+                    showNotification('Failed to load users', 'error');
+                }
             } catch (error) {
+                showNotification('Error loading users', 'error');
                 console.error('Error loading users:', error);
             }
         }
 
-        function renderUsers(users) {
+        // Search users
+        async function searchUsers() {
+            const searchTerm = userSearchEl.value.trim();
+            
+            try {
+                const token = localStorage.getItem('chatToken');
+                const response = await fetch(`${API_BASE_URL}/users?search=${encodeURIComponent(searchTerm)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    users = data.users;
+                    renderUsers();
+                }
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        }
+
+        // Render users list
+        function renderUsers() {
             userGridEl.innerHTML = '';
+            
+            if (users.length === 0) {
+                userGridEl.innerHTML = `
+                    <div class="col-span-full p-8 text-center text-gray-500">
+                        <i class="fas fa-users text-3xl mb-3 text-gray-300"></i>
+                        <p>No users found</p>
+                    </div>
+                `;
+                return;
+            }
             
             users.forEach(user => {
                 if (user._id === currentUser.id) return; // Skip current user
                 
-                const userCard = document.createElement('div');
-                userCard.className = 'user-card';
+                const isOnline = onlineUsers.has(user._id);
                 
+                const userCard = document.createElement('div');
+                userCard.className = 'bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow';
                 userCard.innerHTML = `
-                    <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <h3 class="user-name">${user.username}</h3>
-                    <p class="user-email">${user.email}</p>
-                    <button class="btn btn-outline" data-user-id="${user._id}">Send Message</button>
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-white font-medium">
+                                ${user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="${isOnline ? 'online-indicator' : 'offline-indicator'} absolute bottom-0 right-0"></div>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-gray-800">${user.username}</h3>
+                            <p class="text-sm text-gray-500">${isOnline ? 'Online' : 'Offline'}</p>
+                        </div>
+                    </div>
+                    <button class="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm start-chat-btn">
+                        Message
+                    </button>
                 `;
+                
+                userCard.querySelector('.start-chat-btn').addEventListener('click', () => {
+                    startConversation(user._id, user.username);
+                });
                 
                 userGridEl.appendChild(userCard);
             });
-            
-            // Add event listeners to message buttons
-            document.querySelectorAll('[data-user-id]').forEach(button => {
-                button.addEventListener('click', () => {
-                    const userId = button.getAttribute('data-user-id');
-                    startConversationWithUser(userId);
-                });
-            });
         }
 
-        async function startConversationWithUser(userId) {
+        // Update online status for all users
+        function updateOnlineStatus() {
+            // Update user cards
+            document.querySelectorAll('.start-chat-btn').forEach(btn => {
+                const userCard = btn.closest('div.bg-white');
+                const userId = userCard.dataset.userId;
+                const statusEl = userCard.querySelector('p.text-sm');
+                const indicatorEl = userCard.querySelector('.absolute');
+                
+                if (userId && onlineUsers.has(userId)) {
+                    statusEl.textContent = 'Online';
+                    indicatorEl.className = 'online-indicator absolute bottom-0 right-0';
+                } else if (userId) {
+                    statusEl.textContent = 'Offline';
+                    indicatorEl.className = 'offline-indicator absolute bottom-0 right-0';
+                }
+            });
+            
+            // Update current chat status if it's a private conversation
+            if (currentConversationId) {
+                const currentConversation = conversations.find(c => c._id === currentConversationId);
+                if (currentConversation && currentConversation.type === 'private') {
+                    const otherParticipant = currentConversation.participants.find(p => p._id !== currentUser.id);
+                    if (otherParticipant && onlineUsers.has(otherParticipant._id)) {
+                        currentChatStatusEl.textContent = 'Online';
+                        currentChatStatusIndicatorEl.className = 'online-indicator absolute bottom-0 right-0';
+                    } else {
+                        currentChatStatusEl.textContent = 'Offline';
+                        currentChatStatusIndicatorEl.className = 'offline-indicator absolute bottom-0 right-0';
+                    }
+                }
+            }
+        }
+
+        // Start a new conversation
+        async function startConversation(userId, username) {
             try {
-                const data = await apiRequest('/conversations', {
+                const token = localStorage.getItem('chatToken');
+                const response = await fetch(`${API_BASE_URL}/conversations`, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
                     body: JSON.stringify({
                         participants: [userId],
                         type: 'private'
                     })
                 });
                 
-                showNotification('Conversation started');
-                showPage('chat');
-                loadConversations();
+                const data = await response.json();
                 
-                // Select the new conversation
-                setTimeout(() => {
-                    const newConversation = document.querySelector(`.conversation-item[data-id="${data.conversation._id}"]`);
-                    if (newConversation) {
-                        newConversation.click();
-                    }
-                }, 500);
+                if (data.success) {
+                    showNotification('Conversation started', 'success');
+                    showPage('chat');
+                    
+                    // Add the new conversation to the list
+                    conversations.unshift(data.conversation);
+                    renderConversations();
+                    
+                    // Select the new conversation
+                    selectConversation(data.conversation._id, username, 'private');
+                } else {
+                    showNotification(data.message, 'error');
+                }
             } catch (error) {
+                showNotification('Error starting conversation', 'error');
                 console.error('Error starting conversation:', error);
             }
         }
 
-        // Page Navigation
-        function showPage(pageId) {
-            document.querySelectorAll('.page').forEach(page => {
-                page.classList.remove('active');
-            });
-            document.getElementById(pageId).classList.add('active');
-            
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.classList.remove('active');
-                if (link.getAttribute('data-page') === pageId) {
-                    link.classList.add('active');
-                }
-            });
-            
-            // Load page-specific data
-            if (pageId === 'chat' && isLoggedIn()) {
-                loadConversations();
-            } else if (pageId === 'users' && isLoggedIn()) {
-                loadUsers();
-            }
+        // Show users page (for new conversation)
+        function showUsersPage() {
+            loadUsers();
+            showPage('users');
         }
 
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if user is logged in
-            updateUIForAuthState();
+        // Show notification
+        function showNotification(message, type = 'success') {
+            notificationEl.textContent = message;
+            notificationEl.className = `fixed top-4 right-4 z-50 max-w-sm rounded-lg shadow-lg p-4 text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} notification-show`;
             
-            // Navigation click events
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const pageId = this.getAttribute('data-page');
-                    
-                    if ((pageId === 'chat' || pageId === 'users') && !isLoggedIn()) {
-                        showNotification('Please login first', 'error');
-                        showPage('login');
-                        return;
-                    }
-                    
-                    showPage(pageId);
-                });
-            });
-            
-            // Auth navigation
-            document.getElementById('login-btn').addEventListener('click', function() {
-                showPage('login');
-            });
-            
-            document.getElementById('register-btn').addEventListener('click', function() {
-                showPage('register');
-            });
-            
-            document.getElementById('get-started-btn').addEventListener('click', function() {
-                if (isLoggedIn()) {
-                    showPage('chat');
-                } else {
-                    showPage('register');
-                }
-            });
-            
-            document.getElementById('goto-register').addEventListener('click', function(e) {
-                e.preventDefault();
-                showPage('register');
-            });
-            
-            document.getElementById('goto-login').addEventListener('click', function(e) {
-                e.preventDefault();
-                showPage('login');
-            });
-            
-            // Form submissions
-            document.getElementById('login-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const username = document.getElementById('login-username').value;
-                const password = document.getElementById('login-password').value;
-                
-                const success = await login(username, password);
-                if (success) {
-                    this.reset();
-                }
-            });
-            
-            document.getElementById('register-form').addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const username = document.getElementById('register-username').value;
-                const email = document.getElementById('register-email').value;
-                const password = document.getElementById('register-password').value;
-                const confirmPassword = document.getElementById('register-confirm-password').value;
-                
-                if (password !== confirmPassword) {
-                    showNotification('Passwords do not match', 'error');
-                    return;
-                }
-                
-                const success = await register(username, email, password);
-                if (success) {
-                    this.reset();
-                }
-            });
-            
-            // Logout
-            logoutBtn.addEventListener('click', logout);
-            
-            // Message sending
-            sendBtn.addEventListener('click', sendMessage);
-            messageInputEl.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    sendMessage();
-                }
-            });
-            
-            // New conversation button
-            document.getElementById('new-chat-btn').addEventListener('click', function() {
-                showPage('users');
-            });
-            
-            // Initialize socket connection if user is already logged in
-            if (isLoggedIn()) {
-                initializeSocketConnection();
-            }
-        });
+            setTimeout(() => {
+                notificationEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Debounce function for search
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Initialize the app when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
